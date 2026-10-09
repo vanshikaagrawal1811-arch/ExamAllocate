@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hall Ticket - NPTEL Examination Portal</title><link rel="stylesheet" href="css/style.css"><script src="js/api.js"></script></head>
+<body><header></header>
+<main>
+  <div id="msg" class="alert hide noprint"></div>
+  <div id="card"></div>
+  <div class="actions noprint" style="margin-top:16px"><button id="p" class="btn hide" onclick="window.print()">Print / Save Hall Ticket as PDF</button><a class="btn secondary" href="status.html">Back to Registration</a></div>
+</main>
+<footer class="noprint"><div class="footer-inner">Carry the printed hall ticket and valid original photo identification to the examination centre, as instructed for the examination.</div></footer>
+<script>
+(async()=>{
+  const q=new URLSearchParams(location.search);
+  try{
+    const t=await api(`/admit-cards/${encodeURIComponent(q.get('regId'))}?applicationNo=${encodeURIComponent(q.get('applicationNo')||'')}`);
+    $('card').innerHTML=`
+      <div class="ticket">
+        <div class="ticket-title">
+          <div><div class="muted">NPTEL Examination Portal</div><h1>Hall Ticket</h1></div>
+          <div style="text-align:right"><div class="muted">Hall Ticket No.</div><strong>${esc(t.hallTicketNo)}</strong></div>
+        </div>
+        <table>
+          <tr><th>Candidate Name</th><td>${esc(t.studentName)}</td></tr>
+          <tr><th>Application Number</th><td>${esc(t.applicationNo)}</td></tr>
+          <tr><th>Examination</th><td>${esc(t.examName)}</td></tr>
+          <tr><th>Date & Shift</th><td>${esc(t.examDate)} — ${esc(t.shiftName)}, ${esc(t.startTime)} to ${esc(t.endTime)}</td></tr>
+          <tr><th>Examination Centre</th><td><strong>${esc(t.centerName)}</strong><br>${esc(t.address)}, ${esc(t.city)}</td></tr>
+          <tr><th>Room</th><td>${esc(t.roomNumber)} (Floor ${esc(t.floor)})</td></tr>
+          <tr><th>Seat Number</th><td><span class="seat">${esc(t.seatNumber)}</span></td></tr>
+          <tr><th>Issue Date</th><td>${esc(t.issueDate)}</td></tr>
+        </table>
+        <div class="notice" style="margin-top:20px">
+          <strong>Candidate instructions:</strong>
+          <ul class="list-clean">
+            <li>Carry a printed copy of this hall ticket.</li>
+            <li>Carry a valid original photo identification document.</li>
+            <li>Report to the centre sufficiently before the examination start time.</li>
+            <li>The centre, shift and seat mentioned on this hall ticket are final for this registration.</li>
+          </ul>
+        </div>
+      </div>`;
+    $('p').classList.remove('hide');
+  }catch{}
+})();
+</script></body></html>

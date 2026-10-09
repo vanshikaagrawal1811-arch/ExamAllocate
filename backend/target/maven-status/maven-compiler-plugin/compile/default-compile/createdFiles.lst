@@ -1,0 +1,4 @@
+com\examallocate\service\GrievanceService.class
+application.properties
+com\examallocate\service\AllocationService.class
+com\examallocate\service\RegistrationService.class

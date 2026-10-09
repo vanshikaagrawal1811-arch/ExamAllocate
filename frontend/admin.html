@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - ExamAllocate</title><link rel="stylesheet" href="css/style.css"><script src="js/api.js"></script></head>
+<body><header></header>
+<main>
+  <div class="crumb">Home / Administration</div>
+  <h1 style="color:var(--navy)">Examination Administration</h1>
+  <div id="msg" class="msg hide" role="status"></div>
+  <section class="card"><div class="card-head"><h2>Administrator Login</h2></div><div class="card-body"><div class="row"><input id="key" type="password" placeholder="Admin key" style="max-width:280px"><button class="btn" onclick="enter()">Sign in</button></div></div></section>
+  <div id="panel" class="hide">
+    <section><h2>Allocation</h2>
+      <div class="row"><select id="sess" style="max-width:420px"></select><button onclick="runAlloc()">Run allocation</button><button class="sec" onclick="stats()">Refresh analytics</button></div>
+      <div id="stats" class="row"></div></section>
+    <section><h2>Accommodation requests awaiting a decision</h2><div id="sn"></div></section>
+    <section><h2>Grievances</h2><div id="gv"></div></section>
+  </div>
+</main>
+<script>
+const key = () => $('key').value;
+const table = (rows, cols) => rows.length ? '<table><tr>' + cols.map(c => `<th>${c[0]}</th>`).join('') + '</tr>' +
+  rows.map(r => '<tr>' + cols.map(c => `<td>${c[1](r)}</td>`).join('') + '</tr>').join('') + '</table>' : '<p class="mut">Nothing here.</p>';
+async function enter() {
+  try { await api('/special-needs-requests', { adminKey: key() }); } catch { return; }
+  $('panel').classList.remove('hide'); $('msg').className = 'msg hide';
+  const s = await api('/sessions');
+  $('sess').innerHTML = s.map(x => `<option value="${x.sessionId}">${esc(x.examName)} - ${esc(x.examDate)} (${esc(x.shiftName)})</option>`).join('');
+  stats(); lists();
+}
+async function runAlloc() {
+  try { const r = await api('/allocations/run/' + $('sess').value, { method: 'POST', adminKey: key() });
+    note(`${r.status}: ${r.studentsProcessed} processed, ${r.successfulAllocations} seated, ${r.fallbacksTriggered} fallbacks, ${r.unplaced} unplaced.`); stats(); } catch {}
+}
+async function stats() {
+  try { const s = await api('/analytics/' + $('sess').value, { adminKey: key() });
+    $('stats').innerHTML = `<span class="tag">Registrations ${s.registrations}</span><span class="tag">Seated ${s.seated}</span><span class="tag">Unseated ${s.unseated}</span><span class="tag">Fallback rate ${s.fallbackRatePct}%</span>`; } catch {}
+}
+async function lists() {
+  try {
+    const sn = await api('/special-needs-requests', { adminKey: key() });
+    $('sn').innerHTML = table(sn, [['Student', r => esc(r.studentName)], ['Accommodation', r => esc(r.accommodationType)],
+      ['', r => `<button onclick="decide(${r.requestId},'APPROVED')">Approve</button> <button class="sec" onclick="decide(${r.requestId},'REJECTED')">Reject</button>`]]);
+    const g = await api('/grievances', { adminKey: key() });
+    $('gv').innerHTML = table(g.slice(0, 50), [['#', r => r.grievanceId], ['Student', r => esc(r.studentName)], ['Issue', r => esc(r.description)],
+      ['Status', r => `<span class="tag">${esc(r.status)}</span>`],
+      ['', r => r.status === 'OPEN' ? `<button class="sec" onclick="gv(${r.grievanceId},'UNDER_REVIEW')">Start review</button>`
+        : r.status === 'UNDER_REVIEW' ? `<button onclick="gv(${r.grievanceId},'RESOLVED')">Resolve</button> <button class="sec" onclick="gv(${r.grievanceId},'REJECTED')">Reject</button>` : '']]);
+  } catch {}
+}
+async function decide(id, status) { try { await api('/special-needs-requests/' + id, { method: 'PATCH', adminKey: key(), body: { status } }); lists(); } catch {} }
+async function gv(id, status) {
+  const resolution = status === 'UNDER_REVIEW' ? null : prompt('Resolution note');
+  try { await api(`/grievances/${id}/resolve`, { method: 'PATCH', adminKey: key(), body: { status, resolution } }); lists(); } catch {}
+}
+</script></body></html>

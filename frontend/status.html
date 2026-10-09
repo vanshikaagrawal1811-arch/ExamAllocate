@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Registration - NPTEL Examination Portal</title><link rel="stylesheet" href="css/style.css"><script src="js/api.js"></script></head>
+<body><header></header>
+<main>
+  <div class="crumb">Home / Examination / My Registration</div>
+  <h1 style="color:var(--navy)">My Examination Registration</h1>
+  <p class="muted">Enter the application number generated during registration and the registered email address.</p>
+  <div id="msg" class="alert hide"></div>
+
+  <section class="card">
+    <div class="card-head"><h2>Candidate Login</h2></div>
+    <div class="card-body">
+      <div class="grid">
+        <div><label class="required" for="appNo">Application Number</label><input id="appNo" placeholder="e.g. NPTEL2026-XXXXXXXX"></div>
+        <div><label class="required" for="email">Registered Email</label><input id="email" type="email" placeholder="Email used during registration"></div>
+      </div>
+      <div class="actions" style="margin-top:18px"><button class="btn" onclick="load()">View Registration</button></div>
+    </div>
+  </section>
+
+  <section id="result" class="card hide"></section>
+
+  <section id="gr" class="card hide">
+    <div class="card-head"><h2>Grievance / Support</h2></div>
+    <div class="card-body">
+      <label for="gDesc">Describe your issue</label>
+      <textarea id="gDesc" rows="3" maxlength="1000" placeholder="Enter the issue related to your examination registration or allocation"></textarea>
+      <div class="actions" style="margin-top:12px"><button class="btn" onclick="fileG()">Submit Grievance</button></div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+      <label for="gId">Track Grievance</label>
+      <div class="actions"><input id="gId" placeholder="Grievance ID" style="max-width:260px"><button class="btn secondary" onclick="trackG()">Track</button></div>
+      <div id="gOut" style="margin-top:12px"></div>
+    </div>
+  </section>
+</main>
+<footer><div class="footer-inner">Keep your application number confidential and use the registered email for portal access.</div></footer>
+
+<script>
+const q = new URLSearchParams(location.search);
+if(q.get('applicationNo')) $('appNo').value=q.get('applicationNo');
+if(q.get('email')) $('email').value=q.get('email');
+if(q.get('applicationNo') && q.get('email')) load();
+
+let currentRegId = null;
+
+async function load(){
+  const appNo=$('appNo').value.trim(), email=$('email').value.trim();
+  if(!appNo || !email){ note('Please enter both application number and registered email.',true); return; }
+  try{
+    const r=await api(`/registrations/lookup?applicationNo=${encodeURIComponent(appNo)}&email=${encodeURIComponent(email)}`);
+    currentRegId=r.regId;
+    const a=await api(`/allocations/${encodeURIComponent(r.regId)}?applicationNo=${encodeURIComponent(r.applicationNo)}`);
+    $('msg').classList.add('hide');
+    const result=$('result'); result.classList.remove('hide'); $('gr').classList.remove('hide');
+    result.innerHTML=`
+      <div class="card-head"><h2>Registration Details</h2></div>
+      <div class="card-body">
+        <div class="grid">
+          <div><span class="muted">Application Number</span><br><strong>${esc(r.applicationNo)}</strong></div>
+          <div><span class="muted">Candidate</span><br><strong>${esc(r.studentName)}</strong></div>
+          <div><span class="muted">Course</span><br>${esc(r.courseName)}</div>
+          <div><span class="muted">Assigned Exam Session</span><br>${esc(r.examDate)} — ${esc(r.shiftName)} (${esc(r.startTime)}–${esc(r.endTime)})</div>
+        </div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+        ${a.allocated ? `
+          <span class="status-pill">Seat allocated</span>
+          <h3 style="color:var(--navy)">Examination Centre</h3>
+          <table>
+            <tr><th>Centre</th><td>${esc(a.centerName)}, ${esc(a.city)}<br>${esc(a.address)}</td></tr>
+            <tr><th>Room</th><td>${esc(a.roomNumber)} (Floor ${esc(a.floor)})</td></tr>
+            <tr><th>Seat Number</th><td><span class="seat">${esc(a.seatNumber)}</span></td></tr>
+            <tr><th>Allocation note</th><td>${esc(a.reason)}</td></tr>
+          </table>
+          <div class="actions noprint" style="margin-top:18px">
+            <a class="btn" href="admitcard.html?regId=${encodeURIComponent(r.regId)}&applicationNo=${encodeURIComponent(r.applicationNo)}">View / Print Hall Ticket</a>
+          </div>` : `
+          <span class="tag">Seat not allocated yet</span>
+          <p>${esc(a.reason || 'Your allocation is pending. Please check again after the allocation process is completed.')}</p>
+          <div class="notice">Your registration is active. Centre, room and seat details will appear here once the allocation process is completed.</div>`}
+      </div>`;
+  }catch{
+    $('result').classList.add('hide');
+    $('gr').classList.add('hide');
+  }
+}
+
+async function fileG(){
+  if(!currentRegId){note('Please load your registration first.',true);return;}
+  const desc=$('gDesc').value.trim();
+  if(!desc){note('Please describe your issue.',true);return;}
+  try{
+    const g=await api('/grievances',{method:'POST',body:{
+      regId:currentRegId,applicationNo:$('appNo').value.trim(),description:desc}});
+    $('gDesc').value='';
+    note('Grievance submitted successfully. Your grievance ID is '+g.grievanceId+'.');
+  }catch{}
+}
+async function trackG(){
+  try{
+    const g=await api(`/grievances/${encodeURIComponent($('gId').value.trim())}?applicationNo=${encodeURIComponent($('appNo').value.trim())}`);
+    $('gOut').innerHTML=`<p><span class="tag">${esc(g.status)}</span> ${esc(g.description)}<br><span class="muted">${esc(g.resolution||'No resolution yet')}</span></p>`;
+  }catch{}
+}
+</script></body></html>

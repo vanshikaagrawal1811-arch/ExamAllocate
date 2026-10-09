@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exam Registration - NPTEL Examination Portal</title><link rel="stylesheet" href="css/style.css"><script src="js/api.js"></script></head>
+<body><header></header>
+<main>
+  <div class="crumb">Home / Examination / Exam Registration</div>
+  <div class="stepbar"><div class="step active">1. Candidate details</div><div class="step">2. Preferences</div><div class="step">3. Confirmation</div></div>
+  <h1 style="color:var(--navy)">Examination Registration</h1>
+  <p class="muted">Please enter the details exactly as they should appear on your examination record and hall ticket.</p>
+  <div id="msg" class="alert hide"></div>
+
+  <form id="f" onsubmit="submitForm(event)">
+    <div class="card">
+      <div class="card-head"><h2>Examination Details</h2><p class="section-note">The application number and examination session are assigned by the portal after successful registration.</p></div>
+      <div class="card-body">
+        <div class="grid">
+          <div class="full">
+            <label class="required" for="courseName">Course / Examination</label>
+            <select id="courseName" required><option value="">Loading available examinations...</option></select>
+            <span class="help">Select the course for which you want to appear in the certification examination.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Candidate Details</h2></div>
+      <div class="card-body">
+        <div class="grid">
+          <div><label class="required" for="name">Full Name</label><input id="name" maxlength="100" required placeholder="As per your valid ID"></div>
+          <div><label class="required" for="dob">Date of Birth</label><input id="dob" type="date" required></div>
+          <div><label class="required" for="gender">Gender</label><select id="gender" required><option value="">Select</option><option>Female</option><option>Male</option><option>Other</option><option>Prefer not to say</option></select></div>
+          <div><label class="required" for="category">Category</label><select id="category" required><option value="">Select</option><option>General</option><option>OBC-NCL</option><option>SC</option><option>ST</option><option>EWS</option><option>Other</option></select></div>
+          <div><label class="required" for="phone">Mobile Number</label><input id="phone" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" required placeholder="10-digit mobile number"></div>
+          <div><label class="required" for="email">Email Address</label><input id="email" type="email" maxlength="150" required placeholder="name@example.com"></div>
+          <div><label class="required" for="schoolName">College / Institution</label><input id="schoolName" maxlength="150" required placeholder="Name of your institution"></div>
+          <div><label for="city">Current City</label><input id="city" maxlength="100" placeholder="City"></div>
+          <div><label class="required" for="state">State</label><input id="state" maxlength="100" required placeholder="State"></div>
+          <div><label class="required" for="pincode">PIN Code</label><input id="pincode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required></div>
+          <div class="full"><label class="required" for="address">Communication Address</label><textarea id="address" rows="3" maxlength="255" required placeholder="House/Flat, street, locality"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Examination Preferences</h2><p class="section-note">These preferences help the allocation system select an examination centre. The final centre and seat are issued with the hall ticket.</p></div>
+      <div class="card-body">
+        <div class="grid">
+          <div><label class="required" for="c1">Preferred Examination City 1</label><input id="c1" required placeholder="e.g. Pune"></div>
+          <div><label for="c2">Preferred Examination City 2</label><input id="c2" placeholder="Optional alternate city"></div>
+          <div class="full"><label for="acc">Accessibility / Special Accommodation</label>
+            <select id="acc"><option value="">No special accommodation required</option><option>Wheelchair Accessible Room</option><option>Accessible Seating</option><option>Extra Time</option><option>Scribe Required</option></select>
+            <span class="help">Requests may require verification/approval before allocation.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <label class="checkbox"><input id="declaration" type="checkbox" required>
+          <span>I confirm that the information provided above is correct and belongs to me. I understand that the application number and examination session will be generated/assigned by the portal after registration.</span>
+        </label>
+        <div class="actions" style="margin-top:18px"><button class="btn" type="submit">Submit Examination Registration</button><a class="btn secondary" href="index.html">Cancel</a></div>
+      </div>
+    </div>
+  </form>
+
+  <section id="done" class="confirm hide"></section>
+</main>
+<footer><div class="footer-inner">For this academic demo, examination registration is handled by the ExamAllocate backend. The interface is designed to follow a realistic NPTEL-style workflow.</div></footer>
+
+<script>
+(async () => {
+  try {
+    const courses = await api('/courses');
+    $('courseName').innerHTML = '<option value="">Select a course</option>' +
+      courses.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  } catch {}
+})();
+
+async function submitForm(e) {
+  e.preventDefault();
+  const btn = e.submitter;
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+
+  try {
+    const r = await api('/apply', { method:'POST', body:{
+      courseName:$('courseName').value,
+      name:$('name').value.trim(),
+      dob:$('dob').value,
+      gender:$('gender').value,
+      category:$('category').value,
+      phone:$('phone').value.trim(),
+      email:$('email').value.trim(),
+      address:$('address').value.trim(),
+      city:$('city').value.trim(),
+      state:$('state').value.trim(),
+      pincode:$('pincode').value.trim(),
+      schoolName:$('schoolName').value.trim(),
+      preferredCity1:$('c1').value.trim(),
+      preferredCity2:$('c2').value.trim(),
+      accommodationType:$('acc').value
+    }});
+
+    $('f').classList.add('hide');
+    const d = $('done');
+    d.classList.remove('hide');
+    d.innerHTML = `
+      <span class="status-pill">Registration successful</span>
+      <h2 style="color:var(--navy);margin-bottom:4px">Your examination registration is complete</h2>
+      <p class="muted">Please save the following application number. It has been generated by the portal and will be required for future access.</p>
+      <div class="application-no">${esc(r.applicationNo)}</div>
+      <hr style="border:0;border-top:1px solid #cfe3d7;margin:18px 0">
+      <div class="grid">
+        <div><strong>Candidate</strong><br>${esc(r.courseName)}<br>${esc($('name').value)}</div>
+        <div><strong>Assigned examination session</strong><br>${esc(r.examDate)}<br>${esc(r.shiftName)} — ${esc(r.startTime)} to ${esc(r.endTime)}</div>
+      </div>
+      <div class="notice" style="margin-top:18px"><strong>Important:</strong> Your examination date and shift have been assigned by the portal. Your final examination centre, room and seat will be shown on the hall ticket after allocation.</div>
+      <div class="actions" style="margin-top:18px">
+        <a class="btn" href="status.html?applicationNo=${encodeURIComponent(r.applicationNo)}&email=${encodeURIComponent($('email').value.trim())}">View Registration</a>
+        <button class="btn secondary" onclick="window.print()">Print Confirmation</button>
+      </div>`;
+    window.scrollTo({top:0,behavior:'smooth'});
+  } catch {
+    btn.disabled = false;
+    btn.textContent = 'Submit Examination Registration';
+  }
+}
+</script></body></html>
